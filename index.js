@@ -6,6 +6,7 @@ var colors = require('colors');
 var _      = require('underscore');
 var Q      = require('q');
 var argv   = require('minimist')(process.argv.slice(2));
+var exec   = require('child_process').exec;
 
 /**
  * @var {Object} settings - names of the config file and of the icon image
@@ -14,6 +15,12 @@ var settings = {};
 settings.CONFIG_FILE = argv.config || 'config.xml';
 settings.ICON_FILE = argv.icon || 'icon.png';
 settings.OLD_XCODE_PATH = argv['xcode-old'] || false;
+
+//Generate a version of the icon with rounded corners for android.
+//Could theoretically do this with ig.convert but I couldn't get it to accept the arguments
+exec(`convert ${settings.ICON_FILE} \\( +clone  -alpha extract -draw 'fill black polygon 0,0 0,60 60,0 fill white circle 60,60 60,0' \\( +clone -flip \\) -compose Multiply -composite \\( +clone -flop \\) -compose Multiply -composite \\) -alpha off -compose CopyOpacity -composite rounded-${settings.ICON_FILE}`);
+
+settings.ROUNDED_ICON_FILE = `rounded-${settings.ICON_FILE}`;
 
 /**
  * Check which platforms are added to the project and return their icon names and sizes
@@ -186,7 +193,7 @@ var getProjectName = function () {
  */
 var generateIcon = function (platform, icon) {
   var deferred = Q.defer();
-  var srcPath = settings.ICON_FILE;
+  var srcPath = (platform.name === 'android') ? settings.ROUNDED_ICON_FILE : settings.ICON_FILE;
   var platformPath = srcPath.replace(/\.png$/, '-' + platform.name + '.png');
   if (fs.existsSync(platformPath)) {
     srcPath = platformPath;
